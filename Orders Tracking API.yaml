@@ -1,0 +1,607 @@
+openapi: 3.0.3
+info:
+  title: Order Tracking API
+  version: 0.1.0
+  description: |
+    Design-stage read-optimized external API for tracking orders.
+
+    Base path: `/tracking/orders`
+
+    ## Standard headers
+    - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
+
+servers:
+  - url: https://api.example.com
+    description: Placeholder server (design stage)
+
+tags:
+  - name: Tracking
+    description: Read-only tracking operations for orders.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /tracking/orders:
+    get:
+      tags: [Tracking]
+      summary: List tracking orders
+      operationId: listTrackingOrders
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationId'
+        - $ref: '#/components/parameters/CustomerId'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Tracking orders list
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+            X-Next-Cursor:
+              $ref: '#/components/headers/XNextCursor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingListResponse'
+              examples:
+                ok:
+                  summary: A list of tracking orders
+                  value:
+                    items:
+                      - orderId: ord_12345
+                        customerId: cust_67890
+                        status: CONFIRMED
+                        updatedAt: '2026-03-13T10:05:00Z'
+                        total:
+                          currency: USD
+                          amount: 52055
+                        shipmentsCount: 1
+                    nextCursor: cursor_next_001
+        '400':
+          description: Bad Request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad-request:
+                  value:
+                    code: INVALID_REQUEST
+                    message: One or more fields are invalid.
+                    correlationId: corr_abc123
+                    details:
+                      - field: customerId
+                        issue: Required.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tracking/orders/{orderId}:
+    get:
+      tags: [Tracking]
+      summary: Get tracking order summary
+      operationId: getTrackingOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '200':
+          description: Tracking order summary
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackingOrderSummary'
+              examples:
+                ok:
+                  summary: Summary with timeline and shipments
+                  value:
+                    orderId: ord_12345
+                    customerId: cust_67890
+                    status: CONFIRMED
+                    updatedAt: '2026-03-13T10:05:00Z'
+                    items:
+                      - sku: HP-LJ-MFP-M234SDW
+                        name: HP LaserJet MFP M234sdw
+                        quantity: 1
+                      - sku: W1470A
+                        name: HP 147A Black Toner Cartridge
+                        quantity: 2
+                    shippingAddress:
+                      line1: 1501 Page Mill Rd
+                      city: Palo Alto
+                      region: CA
+                      postalCode: '94304'
+                      country: US
+                    total:
+                      currency: USD
+                      amount: 52055
+                    timeline:
+                      - status: PENDING
+                        occurredAt: '2026-03-13T10:00:00Z'
+                        description: Order created.
+                      - status: CONFIRMED
+                        occurredAt: '2026-03-13T10:01:00Z'
+                        description: Order confirmed.
+                    shipments:
+                      - shipmentId: shp_0001
+                        carrier: UPS
+                        service: GROUND
+                        trackingNumber: 1Z999AA10123456784
+                        status: LABEL_CREATED
+                        shippedAt: '2026-03-13T10:04:00Z'
+                        updatedAt: '2026-03-13T10:05:00Z'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not-found:
+                  value:
+                    code: NOT_FOUND
+                    message: Order not found.
+                    correlationId: corr_abc123
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tracking/orders/{orderId}/shipments:
+    get:
+      tags: [Tracking]
+      summary: List shipments for an order
+      operationId: listTrackingShipments
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '200':
+          description: Shipments list
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentListResponse'
+              examples:
+                ok:
+                  value:
+                    items:
+                      - shipmentId: shp_0001
+                        carrier: UPS
+                        service: GROUND
+                        trackingNumber: 1Z999AA10123456784
+                        status: LABEL_CREATED
+                        shippedAt: '2026-03-13T10:04:00Z'
+                        updatedAt: '2026-03-13T10:05:00Z'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tracking/orders/{orderId}/timeline:
+    get:
+      tags: [Tracking]
+      summary: Get status timeline for an order
+      operationId: getTrackingTimeline
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '200':
+          description: Status timeline
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimelineResponse'
+              examples:
+                ok:
+                  value:
+                    items:
+                      - status: PENDING
+                        occurredAt: '2026-03-13T10:00:00Z'
+                        description: Order created.
+                      - status: CONFIRMED
+                        occurredAt: '2026-03-13T10:01:00Z'
+                        description: Order confirmed.
+                      - status: SHIPPED
+                        occurredAt: '2026-03-13T10:04:00Z'
+                        description: Shipment created.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/OrderId'
+
+    XCorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Optional client-provided correlation ID for tracing.
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+
+    CustomerId:
+      name: customerId
+      in: query
+      required: true
+      description: Customer identifier
+      schema:
+        $ref: '#/components/schemas/CustomerId'
+
+    Status:
+      name: status
+      in: query
+      description: Filter by current order status
+      schema:
+        $ref: '#/components/schemas/TrackingStatus'
+
+    Limit:
+      name: limit
+      in: query
+      description: Max number of results
+      schema:
+        $ref: '#/components/schemas/Limit'
+
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque pagination cursor
+      schema:
+        $ref: '#/components/schemas/Cursor'
+
+  headers:
+    XCorrelationId:
+      description: Correlation ID for tracing.
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+
+    XNextCursor:
+      description: Opaque cursor to fetch the next page (if any)
+      schema:
+        $ref: '#/components/schemas/Cursor'
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unauthorized:
+              value:
+                code: UNAUTHORIZED
+                message: Missing or invalid bearer token.
+                correlationId: corr_abc123
+    Forbidden:
+      description: Forbidden
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            forbidden:
+              value:
+                code: FORBIDDEN
+                message: Insufficient permissions.
+                correlationId: corr_abc123
+    InternalServerError:
+      description: Internal server error
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internal:
+              value:
+                code: INTERNAL_ERROR
+                message: An unexpected error occurred.
+                correlationId: corr_abc123
+
+  schemas:
+    OrderId:
+      type: string
+      description: Order identifier
+      example: ord_12345
+
+    CustomerId:
+      type: string
+      description: Customer identifier
+      example: cust_67890
+
+    CorrelationId:
+      type: string
+      description: Correlation ID for tracing
+      maxLength: 128
+      example: corr_abc123
+
+    Cursor:
+      type: string
+      description: Opaque pagination cursor
+      example: cursor_next_001
+
+    Limit:
+      type: integer
+      minimum: 1
+      maximum: 200
+      default: 50
+      example: 50
+
+    Money:
+      type: object
+      additionalProperties: false
+      required: [currency, amount]
+      properties:
+        currency:
+          type: string
+          example: USD
+        amount:
+          type: integer
+          description: Amount in minor units
+          example: 52055
+
+    Address:
+      type: object
+      additionalProperties: false
+      required: [line1, city, region, postalCode, country]
+      properties:
+        line1:
+          type: string
+          example: 1501 Page Mill Rd
+        line2:
+          type: string
+        city:
+          type: string
+          example: Palo Alto
+        region:
+          type: string
+          example: CA
+        postalCode:
+          type: string
+          example: '94304'
+        country:
+          type: string
+          example: US
+
+    TrackingStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, ALLOCATED, SHIPPED, DELIVERED, CANCELED]
+
+    TrackingItemSummary:
+      type: object
+      additionalProperties: false
+      required: [sku, quantity]
+      properties:
+        sku:
+          type: string
+          example: HP-LJ-MFP-M234SDW
+        name:
+          type: string
+          example: HP LaserJet MFP M234sdw
+        quantity:
+          type: integer
+          example: 1
+
+    StatusTimelineEvent:
+      type: object
+      additionalProperties: false
+      required: [status, occurredAt]
+      properties:
+        status:
+          $ref: '#/components/schemas/TrackingStatus'
+        occurredAt:
+          type: string
+          format: date-time
+          example: '2026-03-13T10:01:00Z'
+        description:
+          type: string
+          example: Order confirmed.
+
+    Shipment:
+      type: object
+      additionalProperties: false
+      required: [shipmentId, carrier, status, updatedAt]
+      properties:
+        shipmentId:
+          type: string
+          example: shp_0001
+        carrier:
+          type: string
+          example: UPS
+        service:
+          type: string
+          example: GROUND
+        trackingNumber:
+          type: string
+          example: 1Z999AA10123456784
+        status:
+          type: string
+          enum: [LABEL_CREATED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED]
+        shippedAt:
+          type: string
+          format: date-time
+          example: '2026-03-13T10:04:00Z'
+        deliveredAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-03-13T10:05:00Z'
+
+    TrackingOrderSummary:
+      type: object
+      additionalProperties: false
+      required: [orderId, customerId, status, updatedAt, total]
+      properties:
+        orderId:
+          $ref: '#/components/schemas/OrderId'
+        customerId:
+          $ref: '#/components/schemas/CustomerId'
+        status:
+          $ref: '#/components/schemas/TrackingStatus'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-03-13T10:05:00Z'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingItemSummary'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        total:
+          $ref: '#/components/schemas/Money'
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusTimelineEvent'
+        shipments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shipment'
+
+    TrackingListItem:
+      type: object
+      additionalProperties: false
+      required: [orderId, customerId, status, updatedAt, total, shipmentsCount]
+      properties:
+        orderId:
+          $ref: '#/components/schemas/OrderId'
+        customerId:
+          $ref: '#/components/schemas/CustomerId'
+        status:
+          $ref: '#/components/schemas/TrackingStatus'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-03-13T10:05:00Z'
+        total:
+          $ref: '#/components/schemas/Money'
+        shipmentsCount:
+          type: integer
+          example: 1
+
+    TrackingListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingListItem'
+        nextCursor:
+          $ref: '#/components/schemas/Cursor'
+
+    ShipmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shipment'
+
+    TimelineResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatusTimelineEvent'
+
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, correlationId]
+      properties:
+        code:
+          type: string
+          example: INVALID_REQUEST
+        message:
+          type: string
+          example: One or more fields are invalid.
+        correlationId:
+          $ref: '#/components/schemas/CorrelationId'
+        details:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, issue]
+            properties:
+              field:
+                type: string
+              issue:
+                type: string
