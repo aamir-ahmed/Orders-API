@@ -1,0 +1,1086 @@
+openapi: 3.0.3
+info:
+  title: Orders Admin API
+  version: 0.1.0
+  description: |
+    Design-stage internal/backoffice API for administering commerce orders.
+
+    ## Standard headers
+    - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
+
+servers:
+  - url: https://api.example.com
+    description: Placeholder server (design stage)
+
+tags:
+  - name: AdminOrders
+    description: Backoffice operations on orders (search, update, holds, notes, notifications).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /admin/orders:
+    get:
+      tags: [AdminOrders]
+      summary: Search orders (admin)
+      operationId: adminListOrders
+      parameters:
+        - $ref: '#/components/parameters/XCorrelationId'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/CustomerId'
+        - $ref: '#/components/parameters/CreatedFrom'
+        - $ref: '#/components/parameters/CreatedTo'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: A list of orders
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+            X-Next-Cursor:
+              $ref: '#/components/headers/XNextCursor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderListResponse'
+              examples:
+                ok:
+                  summary: Admin order list
+                  value:
+                    items:
+                      - id: ord_12345
+                        customerId: cust_67890
+                        status: CONFIRMED
+                        items:
+                          - sku: HP-LJ-MFP-M234SDW
+                            name: HP LaserJet MFP M234sdw
+                            quantity: 1
+                            unitPrice:
+                              currency: USD
+                              amount: 24999
+                            totalPrice:
+                              currency: USD
+                              amount: 24999
+                          - sku: W1470A
+                            name: HP 147A Black Toner Cartridge
+                            quantity: 2
+                            unitPrice:
+                              currency: USD
+                              amount: 10999
+                            totalPrice:
+                              currency: USD
+                              amount: 21998
+                        subtotal:
+                          currency: USD
+                          amount: 46997
+                        tax:
+                          currency: USD
+                          amount: 3759
+                        shipping:
+                          currency: USD
+                          amount: 1299
+                        total:
+                          currency: USD
+                          amount: 52055
+                        createdAt: '2026-03-13T10:00:00Z'
+                        updatedAt: '2026-03-13T10:05:00Z'
+                        metadata:
+                          partnerId: prt_13579
+                          channel: PARTNER
+                          purchaseOrderNumber: PO-1000456
+                        internal:
+                          holds:
+                            - id: hld_0001
+                              type: FRAUD_REVIEW
+                              reason: Automated fraud review.
+                              placedBy: backoffice
+                              placedAt: '2026-03-13T10:02:00Z'
+                              status: ACTIVE
+                          notes:
+                            - id: note_0001
+                              orderId: ord_12345
+                              author: agent_001
+                              message: Customer requested address verification.
+                              createdAt: '2026-03-13T10:03:00Z'
+                    nextCursor: cursor_next_001
+        '400':
+          description: Bad Request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad-request:
+                  summary: Invalid query parameter
+                  value:
+                    code: INVALID_REQUEST
+                    message: One or more fields are invalid.
+                    correlationId: corr_abc123
+                    details:
+                      - field: createdFrom
+                        issue: Must be an ISO-8601 date-time.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/orders/{orderId}:
+    get:
+      tags: [AdminOrders]
+      summary: Get an order by ID (admin)
+      operationId: adminGetOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '200':
+          description: Order found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+              examples:
+                ok:
+                  summary: Admin order
+                  value:
+                    id: ord_12345
+                    customerId: cust_67890
+                    status: CONFIRMED
+                    items:
+                      - sku: HP-LJ-MFP-M234SDW
+                        name: HP LaserJet MFP M234sdw
+                        quantity: 1
+                        unitPrice:
+                          currency: USD
+                          amount: 24999
+                        totalPrice:
+                          currency: USD
+                          amount: 24999
+                      - sku: W1470A
+                        name: HP 147A Black Toner Cartridge
+                        quantity: 2
+                        unitPrice:
+                          currency: USD
+                          amount: 10999
+                        totalPrice:
+                          currency: USD
+                          amount: 21998
+                    shippingAddress:
+                      line1: 1501 Page Mill Rd
+                      city: Palo Alto
+                      region: CA
+                      postalCode: '94304'
+                      country: US
+                    billingAddress:
+                      line1: 1501 Page Mill Rd
+                      city: Palo Alto
+                      region: CA
+                      postalCode: '94304'
+                      country: US
+                    subtotal:
+                      currency: USD
+                      amount: 46997
+                    tax:
+                      currency: USD
+                      amount: 3759
+                    shipping:
+                      currency: USD
+                      amount: 1299
+                    total:
+                      currency: USD
+                      amount: 52055
+                    createdAt: '2026-03-13T10:00:00Z'
+                    updatedAt: '2026-03-13T10:05:00Z'
+                    metadata:
+                      partnerId: prt_13579
+                      channel: PARTNER
+                      purchaseOrderNumber: PO-1000456
+                    internal:
+                      holds: []
+                      notes: []
+                      lastModifiedBy: agent_001
+                      lastModifiedAt: '2026-03-13T10:05:00Z'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not-found:
+                  value:
+                    code: NOT_FOUND
+                    message: Order not found.
+                    correlationId: corr_abc123
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags: [AdminOrders]
+      summary: Update order status (admin)
+      operationId: adminUpdateOrderStatus
+      description: |
+        Updates an order's status.
+
+        Allowed transitions (design stage):
+        - PENDING -> CONFIRMED | CANCELED
+        - CONFIRMED -> ALLOCATED | CANCELED | ON_HOLD
+        - ALLOCATED -> SHIPPED | ON_HOLD
+        - ON_HOLD -> CONFIRMED | ALLOCATED
+        - SHIPPED -> DELIVERED
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+            examples:
+              put-on-hold:
+                summary: Put an order on hold
+                value:
+                  status: ON_HOLD
+                  reason: FRAUD_REVIEW
+      responses:
+        '200':
+          description: Order updated
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+              examples:
+                ok:
+                  summary: Order now on hold
+                  value:
+                    id: ord_12345
+                    customerId: cust_67890
+                    status: ON_HOLD
+                    items:
+                      - sku: HP-LJ-MFP-M234SDW
+                        name: HP LaserJet MFP M234sdw
+                        quantity: 1
+                        unitPrice:
+                          currency: USD
+                          amount: 24999
+                        totalPrice:
+                          currency: USD
+                          amount: 24999
+                      - sku: W1470A
+                        name: HP 147A Black Toner Cartridge
+                        quantity: 2
+                        unitPrice:
+                          currency: USD
+                          amount: 10999
+                        totalPrice:
+                          currency: USD
+                          amount: 21998
+                    subtotal:
+                      currency: USD
+                      amount: 46997
+                    tax:
+                      currency: USD
+                      amount: 3759
+                    shipping:
+                      currency: USD
+                      amount: 1299
+                    total:
+                      currency: USD
+                      amount: 52055
+                    createdAt: '2026-03-13T10:00:00Z'
+                    updatedAt: '2026-03-13T10:07:00Z'
+                    metadata:
+                      partnerId: prt_13579
+                      channel: PARTNER
+                      purchaseOrderNumber: PO-1000456
+                    internal:
+                      holds:
+                        - id: hld_0002
+                          type: FRAUD_REVIEW
+                          reason: FRAUD_REVIEW
+                          placedBy: agent_001
+                          placedAt: '2026-03-13T10:07:00Z'
+                          status: ACTIVE
+                      notes: []
+                      lastModifiedBy: agent_001
+                      lastModifiedAt: '2026-03-13T10:07:00Z'
+        '400':
+          description: Bad Request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid-status:
+                  summary: Invalid status transition
+                  value:
+                    code: INVALID_STATUS_TRANSITION
+                    message: Status transition not allowed.
+                    correlationId: corr_abc123
+                    details:
+                      - field: status
+                        issue: Cannot transition from SHIPPED to CANCELED.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Conflict
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                conflict:
+                  value:
+                    code: CONFLICT
+                    message: Order cannot be updated in its current state.
+                    correlationId: corr_abc123
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/orders/{orderId}/notes:
+    post:
+      tags: [AdminOrders]
+      summary: Add a note to an order
+      operationId: adminAddOrderNote
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateNoteRequest'
+            examples:
+              add-note:
+                summary: Add a note
+                value:
+                  message: Customer requested address verification.
+      responses:
+        '201':
+          description: Note created
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Note'
+              examples:
+                created:
+                  value:
+                    id: note_0002
+                    orderId: ord_12345
+                    author: agent_001
+                    message: Customer requested address verification.
+                    createdAt: '2026-03-13T10:08:00Z'
+        '400':
+          description: Bad Request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                bad-request:
+                  value:
+                    code: INVALID_REQUEST
+                    message: Note message is required.
+                    correlationId: corr_abc123
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/orders/{orderId}/resend-confirmation:
+    post:
+      tags: [AdminOrders]
+      summary: Resend order confirmation
+      operationId: adminResendConfirmation
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      responses:
+        '202':
+          description: Confirmation resend accepted
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendConfirmationResponse'
+              examples:
+                accepted:
+                  value:
+                    accepted: true
+                    orderId: ord_12345
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                not-found:
+                  value:
+                    code: NOT_FOUND
+                    message: Order not found.
+                    correlationId: corr_abc123
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/orders/{orderId}/hold:
+    post:
+      tags: [AdminOrders]
+      summary: Place an order on hold
+      operationId: adminHoldOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateHoldRequest'
+            examples:
+              hold:
+                summary: Place hold
+                value:
+                  type: FRAUD_REVIEW
+                  reason: Automated fraud review.
+      responses:
+        '201':
+          description: Hold created
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hold'
+              examples:
+                created:
+                  value:
+                    id: hld_0003
+                    type: FRAUD_REVIEW
+                    reason: Automated fraud review.
+                    placedBy: agent_001
+                    placedAt: '2026-03-13T10:09:00Z'
+                    status: ACTIVE
+        '400':
+          description: Bad Request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                already-held:
+                  value:
+                    code: HOLD_ALREADY_ACTIVE
+                    message: Order already has an active hold.
+                    correlationId: corr_abc123
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /admin/orders/{orderId}/release-hold:
+    post:
+      tags: [AdminOrders]
+      summary: Release an order hold
+      operationId: adminReleaseHold
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/XCorrelationId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseHoldRequest'
+            examples:
+              release-by-id:
+                summary: Release a specific hold
+                value:
+                  holdId: hld_0003
+      responses:
+        '200':
+          description: Hold released
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+              examples:
+                ok:
+                  summary: Order released from hold
+                  value:
+                    id: ord_12345
+                    customerId: cust_67890
+                    status: CONFIRMED
+                    items:
+                      - sku: HP-LJ-MFP-M234SDW
+                        name: HP LaserJet MFP M234sdw
+                        quantity: 1
+                        unitPrice:
+                          currency: USD
+                          amount: 24999
+                        totalPrice:
+                          currency: USD
+                          amount: 24999
+                      - sku: W1470A
+                        name: HP 147A Black Toner Cartridge
+                        quantity: 2
+                        unitPrice:
+                          currency: USD
+                          amount: 10999
+                        totalPrice:
+                          currency: USD
+                          amount: 21998
+                    subtotal:
+                      currency: USD
+                      amount: 46997
+                    tax:
+                      currency: USD
+                      amount: 3759
+                    shipping:
+                      currency: USD
+                      amount: 1299
+                    total:
+                      currency: USD
+                      amount: 52055
+                    createdAt: '2026-03-13T10:00:00Z'
+                    updatedAt: '2026-03-13T10:10:00Z'
+                    metadata:
+                      partnerId: prt_13579
+                      channel: PARTNER
+                      purchaseOrderNumber: PO-1000456
+                    internal:
+                      holds:
+                        - id: hld_0003
+                          type: FRAUD_REVIEW
+                          reason: Automated fraud review.
+                          placedBy: agent_001
+                          placedAt: '2026-03-13T10:09:00Z'
+                          status: RELEASED
+                          releasedBy: agent_001
+                          releasedAt: '2026-03-13T10:10:00Z'
+                      notes: []
+                      lastModifiedBy: agent_001
+                      lastModifiedAt: '2026-03-13T10:10:00Z'
+        '400':
+          description: Bad Request
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Not found
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/XCorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      description: Order identifier
+      schema:
+        $ref: '#/components/schemas/OrderId'
+
+    XCorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Optional client-provided correlation ID for tracing.
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+
+    Status:
+      name: status
+      in: query
+      description: Filter by order status
+      schema:
+        $ref: '#/components/schemas/OrderStatus'
+
+    CustomerId:
+      name: customerId
+      in: query
+      description: Filter by customer ID
+      schema:
+        $ref: '#/components/schemas/CustomerId'
+
+    CreatedFrom:
+      name: createdFrom
+      in: query
+      description: Filter by creation date (inclusive)
+      schema:
+        $ref: '#/components/schemas/DateTime'
+
+    CreatedTo:
+      name: createdTo
+      in: query
+      description: Filter by creation date (inclusive)
+      schema:
+        $ref: '#/components/schemas/DateTime'
+
+    Limit:
+      name: limit
+      in: query
+      description: Max number of results
+      schema:
+        $ref: '#/components/schemas/Limit'
+
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque pagination cursor
+      schema:
+        $ref: '#/components/schemas/Cursor'
+
+  headers:
+    XCorrelationId:
+      description: Correlation ID for tracing.
+      schema:
+        $ref: '#/components/schemas/CorrelationId'
+
+    XNextCursor:
+      description: Opaque cursor to fetch the next page (if any)
+      schema:
+        $ref: '#/components/schemas/Cursor'
+
+  responses:
+    Unauthorized:
+      description: Unauthorized
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            unauthorized:
+              value:
+                code: UNAUTHORIZED
+                message: Missing or invalid bearer token.
+                correlationId: corr_abc123
+    Forbidden:
+      description: Forbidden
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            forbidden:
+              value:
+                code: FORBIDDEN
+                message: Insufficient permissions.
+                correlationId: corr_abc123
+    InternalServerError:
+      description: Internal server error
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/XCorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            internal:
+              value:
+                code: INTERNAL_ERROR
+                message: An unexpected error occurred.
+                correlationId: corr_abc123
+
+  schemas:
+    OrderId:
+      type: string
+      description: Order identifier
+      example: ord_12345
+
+    CustomerId:
+      type: string
+      description: Customer identifier
+      example: cust_67890
+
+    CorrelationId:
+      type: string
+      description: Correlation ID for tracing
+      maxLength: 128
+      example: corr_abc123
+
+    Cursor:
+      type: string
+      description: Opaque pagination cursor
+      example: cursor_next_001
+
+    Limit:
+      type: integer
+      minimum: 1
+      maximum: 200
+      default: 50
+      example: 50
+
+    DateTime:
+      type: string
+      format: date-time
+      example: '2026-03-13T10:00:00Z'
+
+    ResendConfirmationResponse:
+      type: object
+      additionalProperties: false
+      required: [accepted, orderId]
+      properties:
+        accepted:
+          type: boolean
+        orderId:
+          $ref: '#/components/schemas/OrderId'
+
+    ReleaseHoldRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        holdId:
+          type: string
+          description: Specific hold to release. If omitted, the service releases the current active hold.
+          example: hld_0003
+
+    Money:
+      type: object
+      additionalProperties: false
+      required: [currency, amount]
+      properties:
+        currency:
+          type: string
+          example: USD
+        amount:
+          type: integer
+          description: Amount in minor units (e.g., cents)
+          example: 52055
+
+    Address:
+      type: object
+      additionalProperties: false
+      required: [line1, city, region, postalCode, country]
+      properties:
+        line1:
+          type: string
+          example: 1501 Page Mill Rd
+        line2:
+          type: string
+        city:
+          type: string
+          example: Palo Alto
+        region:
+          type: string
+          example: CA
+        postalCode:
+          type: string
+          example: '94304'
+        country:
+          type: string
+          example: US
+
+    OrderItem:
+      type: object
+      additionalProperties: false
+      required: [sku, quantity]
+      properties:
+        sku:
+          type: string
+          example: HP-LJ-MFP-M234SDW
+        name:
+          type: string
+          example: HP LaserJet MFP M234sdw
+        quantity:
+          type: integer
+          minimum: 1
+          example: 1
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        totalPrice:
+          $ref: '#/components/schemas/Money'
+
+    OrderStatus:
+      type: string
+      description: Order status.
+      enum: [PENDING, CONFIRMED, ALLOCATED, ON_HOLD, SHIPPED, DELIVERED, CANCELED]
+
+    Order:
+      type: object
+      additionalProperties: false
+      required: [id, customerId, status, items, subtotal, tax, shipping, total, createdAt, updatedAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/OrderId'
+        customerId:
+          $ref: '#/components/schemas/CustomerId'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        billingAddress:
+          $ref: '#/components/schemas/Address'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        tax:
+          $ref: '#/components/schemas/Money'
+        shipping:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+        updatedAt:
+          $ref: '#/components/schemas/DateTime'
+        metadata:
+          type: object
+          additionalProperties: true
+          properties:
+            partnerId:
+              type: string
+              example: prt_13579
+            channel:
+              type: string
+              example: PARTNER
+            purchaseOrderNumber:
+              type: string
+              example: PO-1000456
+
+    Note:
+      type: object
+      additionalProperties: false
+      required: [id, orderId, author, message, createdAt]
+      properties:
+        id:
+          type: string
+          example: note_0001
+        orderId:
+          $ref: '#/components/schemas/OrderId'
+        author:
+          type: string
+          example: agent_001
+        message:
+          type: string
+        createdAt:
+          $ref: '#/components/schemas/DateTime'
+
+    HoldStatus:
+      type: string
+      enum: [ACTIVE, RELEASED]
+
+    Hold:
+      type: object
+      additionalProperties: false
+      required: [id, type, reason, placedBy, placedAt, status]
+      properties:
+        id:
+          type: string
+          example: hld_0001
+        type:
+          type: string
+          enum: [FRAUD_REVIEW, PAYMENT_REVIEW, ADDRESS_VERIFICATION]
+        reason:
+          type: string
+        placedBy:
+          type: string
+        placedAt:
+          $ref: '#/components/schemas/DateTime'
+        status:
+          $ref: '#/components/schemas/HoldStatus'
+        releasedBy:
+          type: string
+        releasedAt:
+          $ref: '#/components/schemas/DateTime'
+
+    AdminOrderInternal:
+      type: object
+      additionalProperties: false
+      required: [holds, notes, lastModifiedBy, lastModifiedAt]
+      properties:
+        holds:
+          type: array
+          items:
+            $ref: '#/components/schemas/Hold'
+        notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Note'
+        lastModifiedBy:
+          type: string
+          example: agent_001
+        lastModifiedAt:
+          $ref: '#/components/schemas/DateTime'
+
+    AdminOrder:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          additionalProperties: false
+          required: [internal]
+          properties:
+            internal:
+              $ref: '#/components/schemas/AdminOrderInternal'
+
+    AdminOrderListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOrder'
+        nextCursor:
+          $ref: '#/components/schemas/Cursor'
+
+    UpdateOrderStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        reason:
+          type: string
+          description: Optional reason or code for the status update
+
+    CreateNoteRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    CreateHoldRequest:
+      type: object
+      additionalProperties: false
+      required: [type, reason]
+      properties:
+        type:
+          type: string
+          enum: [FRAUD_REVIEW, PAYMENT_REVIEW, ADDRESS_VERIFICATION]
+        reason:
+          type: string
+
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, correlationId]
+      properties:
+        code:
+          type: string
+          example: INVALID_REQUEST
+        message:
+          type: string
+          example: One or more fields are invalid.
+        correlationId:
+          $ref: '#/components/schemas/CorrelationId'
+        details:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [field, issue]
+            properties:
+              field:
+                type: string
+              issue:
+                type: string
