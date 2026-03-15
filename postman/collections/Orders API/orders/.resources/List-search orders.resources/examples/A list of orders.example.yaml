@@ -1,6 +1,7 @@
 $kind: http-example
 request:
-  url: http://{{baseUrl}}/orders?status=CANCELED&customerId=string&createdFrom=2019-12-09T17:41:18.111Z&createdTo=2019-12-09T17:41:18.111Z&limit=50&cursor=string
+  url: "{{baseUrl}}/orders?status=CONFIRMED&customerId=string&createdFrom=1996-08\
+    -18T12:45:24.464Z&createdTo=1996-08-18T12:45:24.464Z&limit=50&cursor=string"
   method: GET
   headers:
     - key: X-Correlation-Id
@@ -10,16 +11,16 @@ request:
       value: application/json
   queryParams:
     - key: status
-      value: CANCELED
+      value: CONFIRMED
       description: Filter by order status
     - key: customerId
       value: string
       description: Filter by customer ID
     - key: createdFrom
-      value: 2019-12-09T17:41:18.111Z
+      value: 1996-08-18T12:45:24.464Z
       description: Filter by creation date (inclusive) in ISO-8601 format
     - key: createdTo
-      value: 2019-12-09T17:41:18.111Z
+      value: 1996-08-18T12:45:24.464Z
       description: Filter by creation date (inclusive) in ISO-8601 format
     - key: limit
       value: "50"
@@ -27,9 +28,6 @@ request:
     - key: cursor
       value: string
       description: Opaque pagination cursor
-  body:
-    type: text
-    content: ""
 response:
   statusCode: 200
   statusText: OK

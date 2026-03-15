@@ -1,25 +1,26 @@
 $kind: http-request
 name: List/search orders
-url: http://{{baseUrl}}/orders?status=CANCELED&customerId=string&createdFrom=2019-12-09T17:41:18.111Z&createdTo=2019-12-09T17:41:18.111Z&limit=50&cursor=string
+url: "{{baseUrl}}/orders?status=CONFIRMED&customerId=string&createdFrom=1996-08\
+  -18T12:45:24.464Z&createdTo=1996-08-18T12:45:24.464Z&limit=50&cursor=string"
 method: GET
 headers:
   - key: X-Correlation-Id
-    value: string
-    description: Client-provided correlation ID for request tracing.
+    value: "{{$randomUUID}}"
+    description: Optional tracking ID. Share with support to help trace this request.
   - key: Accept
     value: application/json
 queryParams:
   - key: status
-    value: CANCELED
+    value: CONFIRMED
     description: Filter by order status
   - key: customerId
     value: string
     description: Filter by customer ID
   - key: createdFrom
-    value: 2019-12-09T17:41:18.111Z
+    value: 1996-08-18T12:45:24.464Z
     description: Filter by creation date (inclusive) in ISO-8601 format
   - key: createdTo
-    value: 2019-12-09T17:41:18.111Z
+    value: 1996-08-18T12:45:24.464Z
     description: Filter by creation date (inclusive) in ISO-8601 format
   - key: limit
     value: "50"
@@ -27,8 +28,16 @@ queryParams:
   - key: cursor
     value: string
     description: Opaque pagination cursor
-body:
-  type: text
-  content: ""
+scripts:
+  - type: afterResponse
+    code: >-
+      const conformanceTest =
+      pm.require('@field-services-v12-demo/conformance-test');
+
+      conformanceTest.runConformanceTests()
+    language: text/javascript
+    packages:
+      "@field-services-v12-demo/conformance-test":
+        id: 019cc120-c8d5-7281-80d1-64e0193142e5
 examples: ./.resources/List-search orders.resources/examples
-order: 2000
+order: 3000

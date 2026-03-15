@@ -1,6 +1,6 @@
 $kind: http-example
 request:
-  url: http://{{baseUrl}}/orders/:orderId/cancel
+  url: "{{baseUrl}}/orders/:orderId/cancel"
   method: POST
   headers:
     - key: Idempotency-Key
