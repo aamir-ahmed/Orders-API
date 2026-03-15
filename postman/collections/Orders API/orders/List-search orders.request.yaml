@@ -1,0 +1,34 @@
+$kind: http-request
+name: List/search orders
+url: http://{{baseUrl}}/orders?status=CANCELED&customerId=string&createdFrom=2019-12-09T17:41:18.111Z&createdTo=2019-12-09T17:41:18.111Z&limit=50&cursor=string
+method: GET
+headers:
+  - key: X-Correlation-Id
+    value: string
+    description: Client-provided correlation ID for request tracing.
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: status
+    value: CANCELED
+    description: Filter by order status
+  - key: customerId
+    value: string
+    description: Filter by customer ID
+  - key: createdFrom
+    value: 2019-12-09T17:41:18.111Z
+    description: Filter by creation date (inclusive) in ISO-8601 format
+  - key: createdTo
+    value: 2019-12-09T17:41:18.111Z
+    description: Filter by creation date (inclusive) in ISO-8601 format
+  - key: limit
+    value: "50"
+    description: Max number of results to return
+  - key: cursor
+    value: string
+    description: Opaque pagination cursor
+body:
+  type: text
+  content: ""
+examples: ./.resources/List-search orders.resources/examples
+order: 2000

@@ -1,0 +1,25 @@
+$kind: http-request
+url: http://{{baseUrl}}/orders/:orderId/events?limit=50&cursor=string
+method: GET
+headers:
+  - key: X-Correlation-Id
+    value: string
+    description: Client-provided correlation ID for request tracing.
+  - key: Accept
+    value: application/json
+queryParams:
+  - key: limit
+    value: "50"
+    description: Max number of results to return
+  - key: cursor
+    value: string
+    description: Opaque pagination cursor
+pathVariables:
+  - key: orderId
+    value: string
+    description: Order identifier
+body:
+  type: text
+  content: ""
+examples: ./.resources/Get order events.resources/examples
+order: 1000
