@@ -11,8 +11,12 @@ info:
     - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
 
 servers:
-  - url: https://api.example.com
+  - url: '{baseUrl}'
     description: Placeholder server (design stage)
+    variables:
+      baseUrl:
+        default: 'https://api.example.com'
+        description: Base URL for the API (include scheme)
 
 tags:
   - name: Tracking

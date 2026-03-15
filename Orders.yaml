@@ -9,7 +9,7 @@ info:
     - **Idempotency-Key**: Optional for GET. Recommended for POST operations to safely retry requests.
     - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
 servers:
-  - url: https://api.example.com
+  - url: '{{baseUrl}}'
     description: Placeholder server (design stage)
 tags:
   - name: Orders
