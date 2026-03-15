@@ -1,10 +1,11 @@
 $kind: http-example
 request:
-  url: http://{{baseUrl}}/orders
+  url: "{{baseUrl}}/orders"
   method: POST
   headers:
     - key: Idempotency-Key
       value: string
+      disabled: true
       description: >
         A unique key (typically a UUID) that the client provides to make a
         request idempotent.
@@ -13,6 +14,7 @@ request:
         resources.
     - key: X-Correlation-Id
       value: string
+      disabled: true
       description: Client-provided correlation ID for request tracing.
     - key: Content-Type
       value: application/json

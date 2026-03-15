@@ -1,2 +1,21 @@
 $kind: collection
-order: 3000
+description: >-
+  Work with **one specific order** once you know its ID.
+
+
+  Use these requests to:
+
+  - Get the latest details for an order
+
+  - View what has happened to the order over time (events)
+
+  - Request cancellation
+
+
+  **Standard headers (optional but recommended)**
+
+  - **X-Correlation-Id**: Tracking ID to help support trace a specific call.
+
+  - **Idempotency-Key**: Especially useful for actions like cancellation so
+  retries don’t cause duplicate processing.
+order: 1000

@@ -4,20 +4,16 @@ description: |
 
   - If the order is already shipped/delivered, cancellation may be rejected.
   - This operation is idempotent when using **Idempotency-Key**.
-url: http://{{baseUrl}}/orders/:orderId/cancel
+url: "{{baseUrl}}/orders/:orderId/cancel"
 method: POST
 headers:
   - key: Idempotency-Key
-    value: string
-    description: >
-      A unique key (typically a UUID) that the client provides to make a request
-      idempotent.
-
-      Repeating a request with the same key should not create duplicate
-      resources.
+    value: "{{$randomUUID}}"
+    description: Recommended for safe retries. Reuse the same value if you retry the
+      same cancel request.
   - key: X-Correlation-Id
-    value: string
-    description: Client-provided correlation ID for request tracing.
+    value: "{{$randomUUID}}"
+    description: Optional tracking ID. Share with support to help trace this request.
   - key: Content-Type
     value: application/json
   - key: Accept

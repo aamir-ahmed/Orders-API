@@ -1,6 +1,6 @@
 $kind: http-example
 request:
-  url: http://{{baseUrl}}/orders/:orderId
+  url: "{{baseUrl}}/orders/:orderId"
   method: GET
   headers:
     - key: X-Correlation-Id
@@ -12,9 +12,6 @@ request:
     - key: orderId
       value: string
       description: Order identifier
-  body:
-    type: text
-    content: ""
 response:
   statusCode: 404
   statusText: Not Found

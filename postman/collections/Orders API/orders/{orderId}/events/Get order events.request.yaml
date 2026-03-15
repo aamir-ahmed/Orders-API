@@ -1,10 +1,10 @@
 $kind: http-request
-url: http://{{baseUrl}}/orders/:orderId/events?limit=50&cursor=string
+url: "{{baseUrl}}/orders/:orderId/events?limit=50&cursor=string"
 method: GET
 headers:
   - key: X-Correlation-Id
-    value: string
-    description: Client-provided correlation ID for request tracing.
+    value: "{{$randomUUID}}"
+    description: Optional tracking ID. Share with support to help trace this request.
   - key: Accept
     value: application/json
 queryParams:
@@ -18,8 +18,5 @@ pathVariables:
   - key: orderId
     value: string
     description: Order identifier
-body:
-  type: text
-  content: ""
 examples: ./.resources/Get order events.resources/examples
 order: 1000
