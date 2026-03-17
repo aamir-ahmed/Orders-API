@@ -9,7 +9,7 @@ info:
     - **X-Idempotency-Key**: Optional for GET. Recommended for POST operations to safely retry requests.
     - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
 servers:
-  - url: '{{baseUrl}}'
+  - url: 'http://api.orders.local'
     description: Placeholder server (design stage)
 tags:
   - name: Orders
@@ -19,6 +19,7 @@ paths:
     post:
       tags: [Orders]
       summary: Create an order
+      description: Secured endpoint (auth required), but 401/403 responses are not defined.
       operationId: createOrder
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -271,6 +272,7 @@ paths:
     get:
       tags: [Orders]
       summary: Get an order by ID
+      description: Secured endpoint (auth required), but 401/403 responses are not defined.
       operationId: getOrder
       parameters:
         - $ref: '#/components/parameters/OrderId'
