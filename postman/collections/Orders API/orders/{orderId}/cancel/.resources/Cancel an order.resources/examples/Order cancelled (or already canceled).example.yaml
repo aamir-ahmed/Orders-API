@@ -40,7 +40,7 @@ response:
       {
         "id": "ord_12345",
         "customerId": "cust_67890",
-        "status": "CANCELED",
+        "status": "CANCELLED",
         "items": [
           {
             "sku": "HP-LJ-MFP-M234SDW",

@@ -1,21 +1,23 @@
 $kind: collection
 description: >-
-  Manage orders from start to finish.
+  This folder contains the **collection-level** **`/orders`** **endpoints** used
+  to create new orders and to retrieve lists of orders.
 
 
-  Use the requests in this folder to **create an order** or **find existing
-  orders**.
+  ## Requests in this folder
 
 
-  **Standard headers (optional but recommended)**
+  - **Create an order** (`POST {{baseUrl}}/orders`): Create a new order.
+      
+  - **List/search orders** (`GET {{baseUrl}}/orders`): List orders with optional
+  filters (for example `status`, `customerId`, `createdFrom`, `createdTo`) and
+  pagination (`limit`, `cursor`).
+      
 
-  - **Idempotency-Key**: A unique value you generate when creating an order. If
-  you need to retry the same create request (for example, a timeout), reuse the
-  same key so you don’t create duplicates.
-
-  - **X-Correlation-Id**: A tracking ID you generate and send with the request.
-  Share it with support so they can quickly find your request in logs.
+  ## Typical workflow
 
 
-  **Base URL**: `{{baseUrl}}`
+  1. **Create** an order with `POST /orders`.
+      
+  2. **List/search** orders with `GET /orders` to find orders matching criteria.
 order: 1000

@@ -1,16 +1,2 @@
 $kind: collection
-description: >-
-  Request cancellation for an order.
-
-
-  Use this when a customer wants to cancel and the order hasn’t progressed too
-  far (for example, it may be rejected if already shipped).
-
-
-  **Standard headers (optional but recommended)**
-
-  - **Idempotency-Key**: Use a unique key per cancellation attempt and reuse it
-  if you retry, so the same cancellation isn’t processed twice.
-
-  - **X-Correlation-Id**: Tracking ID for support.
 order: 1000

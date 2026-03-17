@@ -4,12 +4,77 @@ method: GET
 headers:
   - key: X-Correlation-Id
     value: "{{$randomUUID}}"
-    description: Optional tracking ID. Share with support to help trace this request.
+    description: Client-provided correlation ID for request tracing.
   - key: Accept
     value: application/json
 pathVariables:
   - key: orderId
     value: string
     description: Order identifier
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Use the orderId created in the previous step if available
+      const orderId = pm.collectionVariables.get("createdOrderId");
+      if (orderId) {
+          pm.variables.set("orderId", orderId);
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: >-
+      pm.test("Status code is 200 OK", () => {
+          pm.response.to.have.status(200);
+      });
+
+
+      pm.test("Response Content-Type is application/json", () => {
+          pm.expect(pm.response.headers.get("Content-Type")).to.include("application/json");
+      });
+
+
+      pm.test("Response body is a valid JSON object", () => {
+          pm.response.to.be.json;
+      });
+
+
+      pm.test("Response contains an order ID", () => {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("id");
+          pm.expect(json.id).to.be.a("string").and.not.empty;
+      });
+
+
+      pm.test("Returned order ID matches requested ID", () => {
+          const json = pm.response.json();
+          const requestedId = pm.collectionVariables.get("createdOrderId");
+          if (requestedId) {
+              pm.expect(json.id).to.equal(requestedId);
+          }
+      });
+
+
+      pm.test("Response contains status field", () => {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("status");
+          pm.expect(json.status).to.be.a("string").and.not.empty;
+      });
+
+
+      pm.test("Response contains customerId field", () => {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("customerId");
+      });
+
+
+      pm.test("Response contains items array", () => {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("items").that.is.an("array");
+      });
+
+
+      pm.test("Response time is under 3000ms", () => {
+          pm.expect(pm.response.responseTime).to.be.below(3000);
+      });
+    language: text/javascript
 examples: ./.resources/Get an order by ID.resources/examples
 order: 3000

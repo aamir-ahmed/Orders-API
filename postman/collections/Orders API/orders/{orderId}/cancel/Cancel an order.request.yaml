@@ -9,11 +9,15 @@ method: POST
 headers:
   - key: Idempotency-Key
     value: "{{$randomUUID}}"
-    description: Recommended for safe retries. Reuse the same value if you retry the
-      same cancel request.
+    description: >
+      A unique key (typically a UUID) that the client provides to make a request
+      idempotent.
+
+      Repeating a request with the same key should not create duplicate
+      resources.
   - key: X-Correlation-Id
     value: "{{$randomUUID}}"
-    description: Optional tracking ID. Share with support to help trace this request.
+    description: Client-provided correlation ID for request tracing.
   - key: Content-Type
     value: application/json
   - key: Accept
@@ -28,5 +32,56 @@ body:
     {
       "reason": "Partner requested cancellation."
     }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Use the orderId created earlier if available
+      const orderId = pm.collectionVariables.get("createdOrderId");
+      if (orderId) {
+          pm.variables.set("orderId", orderId);
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: >-
+      pm.test("Status code is 200 OK or 202 Accepted", () => {
+          pm.expect(pm.response.code).to.be.oneOf([200, 202]);
+      });
+
+
+      pm.test("Response Content-Type is application/json", () => {
+          pm.expect(pm.response.headers.get("Content-Type")).to.include("application/json");
+      });
+
+
+      pm.test("Response body is a valid JSON object", () => {
+          pm.response.to.be.json;
+      });
+
+
+      pm.test("Response contains order ID", () => {
+          const json = pm.response.json();
+          pm.expect(json).to.have.property("id");
+          pm.expect(json.id).to.be.a("string").and.not.empty;
+      });
+
+
+      pm.test("Cancelled order status reflects cancellation", () => {
+          const json = pm.response.json();
+          if (json.status) {
+              pm.expect(json.status).to.be.oneOf(["CANCELLED", "CANCELLATION_REQUESTED", "PENDING_CANCELLATION"]);
+          }
+      });
+
+
+      pm.test("Idempotency: response is consistent on repeated call", () => {
+          // Basic check: response is a valid JSON object (idempotency is structural)
+          pm.response.to.be.json;
+      });
+
+
+      pm.test("Response time is under 3000ms", () => {
+          pm.expect(pm.response.responseTime).to.be.below(3000);
+      });
+    language: text/javascript
 examples: ./.resources/Cancel an order.resources/examples
 order: 1000

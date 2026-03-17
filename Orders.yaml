@@ -6,7 +6,7 @@ info:
     Design-stage API for managing commerce orders.
 
     ## Standard headers
-    - **Idempotency-Key**: Optional for GET. Recommended for POST operations to safely retry requests.
+    - **X-Idempotency-Key**: Optional for GET. Recommended for POST operations to safely retry requests.
     - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
 servers:
   - url: '{{baseUrl}}'
@@ -166,7 +166,7 @@ paths:
           in: query
           description: Filter by customer ID
           schema:
-            type: string
+            $ref: '#/components/schemas/CustomerId'
         - name: createdFrom
           in: query
           description: Filter by creation date (inclusive) in ISO-8601 format
@@ -205,16 +205,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Order'
-                  nextCursor:
-                    type: string
-                    description: Convenience field mirroring X-Next-Cursor
+                $ref: '#/components/schemas/OrderListResponse'
               example:
                 items:
                   - id: ord_12345
@@ -381,12 +372,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                reason:
-                  type: string
-                  description: Optional reason for cancellation
+              $ref: '#/components/schemas/CancelOrderRequest'
             examples:
               cancel-order:
                 summary: Cancel order request
@@ -394,7 +380,7 @@ paths:
                   reason: Partner requested cancellation.
       responses:
         '200':
-          description: Order canceled (or already canceled)
+          description: Order cancelled (or already cancelled)
           headers:
             X-Correlation-Id:
               $ref: '#/components/headers/XCorrelationId'
@@ -405,7 +391,7 @@ paths:
               example:
                 id: ord_12345
                 customerId: cust_67890
-                status: CANCELED
+                status: cancelled
                 items:
                   - sku: HP-LJ-MFP-M234SDW
                     name: HP LaserJet MFP M234sdw
@@ -439,7 +425,7 @@ paths:
                   amount: 52055
                 createdAt: '2026-03-13T10:00:00Z'
                 updatedAt: '2026-03-13T10:05:00Z'
-                canceledAt: '2026-03-13T10:06:00Z'
+                cancelledAt: '2026-03-13T10:06:00Z'
                 metadata:
                   partnerId: prt_13579
                   channel: PARTNER
@@ -468,7 +454,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 code: CONFLICT
-                message: Order cannot be canceled in its current status.
+                message: Order cannot be cancelled in its current status.
                 correlationId: corr_abc123
         '500':
           $ref: '#/components/responses/InternalServerError'
@@ -484,15 +470,12 @@ paths:
           in: query
           description: Max number of results to return
           schema:
-            type: integer
-            minimum: 1
-            maximum: 200
-            default: 50
+            $ref: '#/components/schemas/Limit'
         - name: cursor
           in: query
           description: Opaque pagination cursor
           schema:
-            type: string
+            $ref: '#/components/schemas/Cursor'
       responses:
         '200':
           description: A list of events for the order
@@ -502,19 +485,11 @@ paths:
             X-Next-Cursor:
               description: Opaque cursor to fetch the next page (if any)
               schema:
-                type: string
+                $ref: '#/components/schemas/Cursor'
           content:
             application/json:
               schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/OrderEvent'
-                  nextCursor:
-                    type: string
+                $ref: '#/components/schemas/OrderEventListResponse'
               example:
                 items:
                   - id: evt_0001
@@ -536,11 +511,11 @@ paths:
                       note: Order confirmed.
                   - id: evt_0003
                     orderId: ord_12345
-                    type: CANCELED
+                    type: CANCELLED
                     occurredAt: '2026-03-13T10:06:00Z'
                     actor: system
                     details:
-                      note: Order canceled.
+                      note: Order cancelled.
                 nextCursor: cursor_next_evt_001
         '404':
           description: Resource not found
@@ -567,7 +542,7 @@ components:
       schema:
         type: string
     IdempotencyKey:
-      name: Idempotency-Key
+      name: X-Idempotency-Key
       in: header
       required: false
       description: |
@@ -627,10 +602,44 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    CustomerId:
+      type: string
+      description: Customer identifier
+      example: cust_67890
+    CancelOrderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          description: Optional reason for cancellation
+    OrderListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        nextCursor:
+          type: string
+          description: Convenience field mirroring X-Next-Cursor
+    OrderEventListResponse:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderEvent'
+        nextCursor:
+          type: string
     OrderStatus:
       type: string
       description: Order lifecycle status
-      enum: [PENDING, CONFIRMED, ALLOCATED, SHIPPED, DELIVERED, CANCELED]
+      enum: [PENDING, CONFIRMED, ALLOCATED, SHIPPED, DELIVERED, CANCELLED]
     Money:
       type: object
       additionalProperties: false
@@ -724,7 +733,7 @@ components:
         updatedAt:
           type: string
           format: date-time
-        canceledAt:
+        cancelledAt:
           type: string
           format: date-time
         metadata:
@@ -769,7 +778,7 @@ components:
             type: string
     OrderEventType:
       type: string
-      enum: [CREATED, CONFIRMED, ALLOCATED, SHIPPED, DELIVERED, CANCELED]
+      enum: [CREATED, CONFIRMED, ALLOCATED, SHIPPED, DELIVERED, CANCELLED]
     OrderEvent:
       type: object
       additionalProperties: false

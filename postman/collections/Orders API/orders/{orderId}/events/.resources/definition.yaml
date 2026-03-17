@@ -1,17 +1,2 @@
 $kind: collection
-description: >-
-  See a timeline of updates for an order.
-
-
-  Events help you understand *what changed and when*—for example, when an order
-  was created, confirmed, shipped, or cancelled.
-
-
-  **Standard headers (optional but recommended)**
-
-  - **X-Correlation-Id**: Tracking ID for support.
-
-
-  Tip: Events are helpful for building order-tracking screens or troubleshooting
-  customer questions.
 order: 2000

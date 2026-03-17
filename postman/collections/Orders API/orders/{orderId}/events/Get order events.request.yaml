@@ -1,22 +1,73 @@
 $kind: http-request
-url: "{{baseUrl}}/orders/:orderId/events?limit=50&cursor=string"
+url: "{{baseUrl}}/orders/:orderId/events?value=reference
+  %23/components/schemas/Limit not found in the OpenAPI spec&value=reference
+  %23/components/schemas/Cursor not found in the OpenAPI spec"
 method: GET
 headers:
   - key: X-Correlation-Id
     value: "{{$randomUUID}}"
-    description: Optional tracking ID. Share with support to help trace this request.
+    description: Client-provided correlation ID for request tracing.
   - key: Accept
     value: application/json
 queryParams:
-  - key: limit
-    value: "50"
+  - key: value
+    value: "reference #/components/schemas/Limit not found in the OpenAPI spec"
     description: Max number of results to return
-  - key: cursor
-    value: string
+  - key: value
+    value: "reference #/components/schemas/Cursor not found in the OpenAPI spec"
     description: Opaque pagination cursor
 pathVariables:
   - key: orderId
     value: string
     description: Order identifier
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Use the orderId created earlier if available
+      const orderId = pm.collectionVariables.get("createdOrderId");
+      if (orderId) {
+          pm.variables.set("orderId", orderId);
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: >-
+      pm.test("Status code is 200 OK", () => {
+          pm.response.to.have.status(200);
+      });
+
+
+      pm.test("Response Content-Type is application/json", () => {
+          pm.expect(pm.response.headers.get("Content-Type")).to.include("application/json");
+      });
+
+
+      pm.test("Response body is a valid JSON object", () => {
+          pm.response.to.be.json;
+      });
+
+
+      pm.test("Response contains an events/data/items array", () => {
+          const json = pm.response.json();
+          const hasEvents = json.hasOwnProperty("events") && Array.isArray(json.events);
+          const hasData = json.hasOwnProperty("data") && Array.isArray(json.data);
+          const hasItems = json.hasOwnProperty("items") && Array.isArray(json.items);
+          pm.expect(hasEvents || hasData || hasItems, "Response should contain an events, data, or items array").to.be.true;
+      });
+
+
+      pm.test("Each event has a type and timestamp", () => {
+          const json = pm.response.json();
+          const events = json.events || json.data || json.items || [];
+          events.forEach((event, i) => {
+              pm.expect(event, `Event at index ${i} should have a type`).to.have.property("type");
+              pm.expect(event, `Event at index ${i} should have a timestamp`).to.satisfy(e => e.timestamp || e.createdAt || e.occurredAt, "should have a timestamp field");
+          });
+      });
+
+
+      pm.test("Response time is under 3000ms", () => {
+          pm.expect(pm.response.responseTime).to.be.below(3000);
+      });
+    language: text/javascript
 examples: ./.resources/Get order events.resources/examples
 order: 1000

@@ -14,3 +14,5 @@ cloudResources:
     ../postman/collections/Orders API: 53143593-e31679fc-93a1-4101-add4-6e491049012b
   specs:
     ../Orders.yaml: 18e6783c-b13c-4502-a780-18c099872e62
+  environments:
+    ../postman/environments/Orders API.environment.yaml: 53143593-244c8edf-5293-4db7-9f60-6e7bde8ef6d5

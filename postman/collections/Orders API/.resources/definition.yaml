@@ -12,3 +12,10 @@ description: >
   across services.
 variables:
   baseUrl: "{{baseUrl}}"
+  regressionSuiteVersion: ""
+  createOrderIdempotencyKey: ""
+  createdOrderId: ""
+scripts:
+  - type: http:beforeRequest
+    code: pm.collectionVariables.set("regressionSuiteVersion", "1.0");
+    language: text/javascript

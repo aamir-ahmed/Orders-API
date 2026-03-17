@@ -1,7 +1,8 @@
 $kind: http-example
 request:
-  url: "{{baseUrl}}/orders?status=CONFIRMED&customerId=string&createdFrom=1996-08\
-    -18T12:45:24.464Z&createdTo=1996-08-18T12:45:24.464Z&limit=50&cursor=string"
+  url: "{{baseUrl}}/orders?status=CONFIRMED&customerId=cust_67890&createdFrom=196\
+    7-01-09T23:52:44.717Z&createdTo=1967-01-09T23:52:44.717Z&limit=50&cursor=st\
+    ring"
   method: GET
   headers:
     - key: X-Correlation-Id
@@ -14,13 +15,13 @@ request:
       value: CONFIRMED
       description: Filter by order status
     - key: customerId
-      value: string
+      value: cust_67890
       description: Filter by customer ID
     - key: createdFrom
-      value: 1996-08-18T12:45:24.464Z
+      value: 1967-01-09T23:52:44.717Z
       description: Filter by creation date (inclusive) in ISO-8601 format
     - key: createdTo
-      value: 1996-08-18T12:45:24.464Z
+      value: 1967-01-09T23:52:44.717Z
       description: Filter by creation date (inclusive) in ISO-8601 format
     - key: limit
       value: "50"

@@ -1,6 +1,7 @@
 $kind: http-example
 request:
-  url: "{{baseUrl}}/orders/:orderId/events?limit=50&cursor=string"
+  url: "{{baseUrl}}/orders/:orderId/events?value=reference
+    %23/components/schemas/Cursor not found in the OpenAPI spec"
   method: GET
   headers:
     - key: X-Correlation-Id
@@ -9,12 +10,9 @@ request:
     - key: Accept
       value: application/json
   queryParams:
-    - key: limit
-      value: "50"
+    - key: value
+      value: "reference #/components/schemas/Cursor not found in the OpenAPI spec"
       description: Max number of results to return
-    - key: cursor
-      value: string
-      description: Opaque pagination cursor
   pathVariables:
     - key: orderId
       value: string

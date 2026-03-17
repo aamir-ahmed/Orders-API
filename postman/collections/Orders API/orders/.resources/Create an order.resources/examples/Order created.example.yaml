@@ -67,7 +67,7 @@ response:
     type: json
     content: |-
       {
-        "id": {{$randomUUID}},
+        "id": "ord_12345",
         "customerId": "cust_67890",
         "status": "PENDING",
         "items": [
