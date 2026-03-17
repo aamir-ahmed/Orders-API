@@ -1,6 +1,0 @@
-name: Orders API
-values:
-  - key: baseUrl
-    value: https://f2c41a1d-fbc8-46b5-b33e-62a1ab4304a7.mock.pstmn.io
-    enabled: true
-color: null
