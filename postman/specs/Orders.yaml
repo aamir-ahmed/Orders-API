@@ -4,10 +4,6 @@ info:
   version: 0.1.0
   description: |
     Design-stage API for managing commerce orders.
-
-    ## Standard headers
-    - **X-Idempotency-Key**: Optional for GET. Recommended for POST operations to safely retry requests.
-    - **X-Correlation-Id**: Optional client-provided correlation ID for tracing across services.
 servers:
   - url: 'http://api.orders.local'
     description: Placeholder server (design stage)
@@ -21,9 +17,6 @@ paths:
       summary: Create an order
       description: Secured endpoint (auth required), but 401/403 responses are not defined.
       operationId: createOrder
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XCorrelationId'
       requestBody:
         required: true
         content:
@@ -61,9 +54,6 @@ paths:
       responses:
         '201':
           description: Order created
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -123,9 +113,6 @@ paths:
                   purchaseOrderNumber: PO-1000456
         '400':
           description: Bad Request
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -137,19 +124,6 @@ paths:
                 details:
                   - field: items[1].quantity
                     issue: Must be greater than or equal to 1.
-        '409':
-          description: Conflict
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                code: CONFLICT
-                message: An order with the same idempotency key already exists.
-                correlationId: corr_abc123
         '500':
           $ref: '#/components/responses/InternalServerError'
     get:
@@ -157,7 +131,6 @@ paths:
       summary: List/search orders
       operationId: listOrders
       parameters:
-        - $ref: '#/components/parameters/XCorrelationId'
         - name: status
           in: query
           description: Filter by order status
@@ -168,41 +141,9 @@ paths:
           description: Filter by customer ID
           schema:
             $ref: '#/components/schemas/CustomerId'
-        - name: createdFrom
-          in: query
-          description: Filter by creation date (inclusive) in ISO-8601 format
-          schema:
-            type: string
-            format: date-time
-        - name: createdTo
-          in: query
-          description: Filter by creation date (inclusive) in ISO-8601 format
-          schema:
-            type: string
-            format: date-time
-        - name: limit
-          in: query
-          description: Max number of results to return
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 200
-            default: 50
-        - name: cursor
-          in: query
-          description: Opaque pagination cursor
-          schema:
-            type: string
       responses:
         '200':
           description: A list of orders
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
-            X-Next-Cursor:
-              description: Opaque cursor to fetch the next page (if any)
-              schema:
-                type: string
           content:
             application/json:
               schema:
@@ -252,9 +193,6 @@ paths:
                 nextCursor: cursor_next_001
         '400':
           description: Bad Request
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -276,13 +214,9 @@ paths:
       operationId: getOrder
       parameters:
         - $ref: '#/components/parameters/OrderId'
-        - $ref: '#/components/parameters/XCorrelationId'
       responses:
         '200':
           description: Order found
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -342,9 +276,6 @@ paths:
                   purchaseOrderNumber: PO-1000456
         '404':
           description: Resource not found
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -367,8 +298,6 @@ paths:
         - This operation is idempotent when using **Idempotency-Key**.
       parameters:
         - $ref: '#/components/parameters/OrderId'
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/XCorrelationId'
       requestBody:
         required: false
         content:
@@ -383,9 +312,6 @@ paths:
       responses:
         '200':
           description: Order cancelled (or already cancelled)
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -434,9 +360,6 @@ paths:
                   purchaseOrderNumber: PO-1000456
         '404':
           description: Resource not found
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -444,19 +367,6 @@ paths:
               example:
                 code: NOT_FOUND
                 message: Order not found.
-                correlationId: corr_abc123
-        '409':
-          description: Conflict
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                code: CONFLICT
-                message: Order cannot be cancelled in its current status.
                 correlationId: corr_abc123
         '500':
           $ref: '#/components/responses/InternalServerError'
@@ -467,27 +377,9 @@ paths:
       operationId: getOrderEvents
       parameters:
         - $ref: '#/components/parameters/OrderId'
-        - $ref: '#/components/parameters/XCorrelationId'
-        - name: limit
-          in: query
-          description: Max number of results to return
-          schema:
-            $ref: '#/components/schemas/Limit'
-        - name: cursor
-          in: query
-          description: Opaque pagination cursor
-          schema:
-            $ref: '#/components/schemas/Cursor'
       responses:
         '200':
           description: A list of events for the order
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
-            X-Next-Cursor:
-              description: Opaque cursor to fetch the next page (if any)
-              schema:
-                $ref: '#/components/schemas/Cursor'
           content:
             application/json:
               schema:
@@ -521,9 +413,6 @@ paths:
                 nextCursor: cursor_next_evt_001
         '404':
           description: Resource not found
-          headers:
-            X-Correlation-Id:
-              $ref: '#/components/headers/XCorrelationId'
           content:
             application/json:
               schema:
@@ -542,68 +431,30 @@ components:
       required: true
       description: Order identifier
       schema:
-        type: string
-    IdempotencyKey:
-      name: X-Idempotency-Key
-      in: header
-      required: false
-      description: |
-        A unique key (typically a UUID) that the client provides to make a request idempotent.
-        Repeating a request with the same key should not create duplicate resources.
-      schema:
-        type: string
-        maxLength: 128
-    XCorrelationId:
-      name: X-Correlation-Id
-      in: header
-      required: false
-      description: Client-provided correlation ID for request tracing.
-      schema:
-        type: string
-        maxLength: 128
-  headers:
-    XCorrelationId:
-      description: Correlation ID for request tracing.
-      schema:
-        type: string
+        $ref: "#/components/schemas/OrderId"
   responses:
     BadRequest:
       description: Bad Request
-      headers:
-        X-Correlation-Id:
-          $ref: '#/components/headers/XCorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
     NotFound:
       description: Resource not found
-      headers:
-        X-Correlation-Id:
-          $ref: '#/components/headers/XCorrelationId'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    Conflict:
-      description: Conflict
-      headers:
-        X-Correlation-Id:
-          $ref: '#/components/headers/XCorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
     InternalServerError:
       description: Internal server error
-      headers:
-        X-Correlation-Id:
-          $ref: '#/components/headers/XCorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    OrderId:
+            type: string
+            description: Order identifier
     CustomerId:
       type: string
       description: Customer identifier

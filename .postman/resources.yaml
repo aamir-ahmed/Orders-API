@@ -6,12 +6,13 @@ localResources:
   specs:
     - ../Orders Admin API.yaml
     - ../Orders Tracking API.yaml
-    - ../Orders.yaml
+    - ../postman/specs/Orders.yaml
 
 # Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
 cloudResources:
   collections:
     ../postman/collections/Orders API: 53143593-e31679fc-93a1-4101-add4-6e491049012b
-  specs: {}
+  specs:
+    ../postman/specs/Orders.yaml: 643ceca6-c7c3-481f-8ee1-29bfca56c8ba
   environments:
     ../postman/environments/Orders API.environment.yaml: 53143593-244c8edf-5293-4db7-9f60-6e7bde8ef6d5
