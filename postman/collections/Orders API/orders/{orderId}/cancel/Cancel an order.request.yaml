@@ -1,0 +1,23 @@
+$kind: http-request
+description: |
+  Requests cancellation for an order.
+
+  - If the order is already shipped/delivered, cancellation may be rejected.
+  - This operation is idempotent when using **Idempotency-Key**.
+url: "{{baseUrl}}/orders/:orderId/cancel"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+pathVariables:
+  - key: orderId
+    value: string
+    description: Order identifier
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Partner requested cancellation."
+    }
+examples: ./.resources/Cancel an order.resources/examples
+order: 1000

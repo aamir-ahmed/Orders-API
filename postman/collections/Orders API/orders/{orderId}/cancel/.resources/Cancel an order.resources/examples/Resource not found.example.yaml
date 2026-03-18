@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/orders/:orderId/cancel"
+  method: POST
+  headers:
+    Content-Type: application/json
+    Accept: application/json
+  pathVariables:
+    - key: orderId
+      value: string
+      description: Order identifier
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Partner requested cancellation."
+      }
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": "NOT_FOUND",
+        "message": "Order not found.",
+        "correlationId": "corr_abc123"
+      }
+order: 2000

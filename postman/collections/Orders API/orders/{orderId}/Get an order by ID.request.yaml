@@ -1,0 +1,15 @@
+$kind: http-request
+description: Secured endpoint (auth required), but 401/403 responses are not defined.
+url: "{{baseUrl}}/orders/:orderId"
+method: GET
+headers:
+  Accept: application/json
+pathVariables:
+  - key: orderId
+    value: string
+    description: Order identifier
+body:
+  type: text
+  content: ""
+examples: ./.resources/Get an order by ID.resources/examples
+order: 1000

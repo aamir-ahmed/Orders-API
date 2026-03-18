@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/orders/:orderId/events"
+method: GET
+headers:
+  Accept: application/json
+pathVariables:
+  - key: orderId
+    value: string
+    description: Order identifier
+body:
+  type: text
+  content: ""
+examples: ./.resources/Get order events.resources/examples
+order: 1000

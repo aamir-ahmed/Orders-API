@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/orders/:orderId/cancel"
+  method: POST
+  headers:
+    Content-Type: application/json
+    Accept: application/json
+  pathVariables:
+    - key: orderId
+      value: string
+      description: Order identifier
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Partner requested cancellation."
+      }
+response:
+  statusCode: 500
+  statusText: Internal Server Error
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": "INVALID_REQUEST",
+        "message": "One or more fields are invalid.",
+        "correlationId": "string",
+        "details": [
+          {
+            "field": "string",
+            "issue": "string"
+          },
+          {
+            "field": "string",
+            "issue": "string"
+          }
+        ]
+      }
+order: 3000

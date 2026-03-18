@@ -1,0 +1,64 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/orders"
+  method: POST
+  headers:
+    Content-Type: application/json
+    Accept: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "customerId": "cust_67890",
+        "currency": "USD",
+        "items": [
+          {
+            "sku": "HP-LJ-MFP-M234SDW",
+            "quantity": 1
+          },
+          {
+            "sku": "W1470A",
+            "quantity": 2
+          }
+        ],
+        "shippingAddress": {
+          "line1": "1501 Page Mill Rd",
+          "city": "Palo Alto",
+          "region": "CA",
+          "postalCode": "94304",
+          "country": "US"
+        },
+        "billingAddress": {
+          "line1": "1501 Page Mill Rd",
+          "city": "Palo Alto",
+          "region": "CA",
+          "postalCode": "94304",
+          "country": "US"
+        },
+        "notes": "Partner order submission.",
+        "metadata": {
+          "partnerId": "prt_13579",
+          "channel": "PARTNER",
+          "purchaseOrderNumber": "PO-1000456"
+        }
+      }
+response:
+  statusCode: 400
+  statusText: Bad Request
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": "INVALID_REQUEST",
+        "message": "One or more fields are invalid.",
+        "correlationId": "corr_abc123",
+        "details": [
+          {
+            "field": "items[1].quantity",
+            "issue": "Must be greater than or equal to 1."
+          }
+        ]
+      }
+order: 2000

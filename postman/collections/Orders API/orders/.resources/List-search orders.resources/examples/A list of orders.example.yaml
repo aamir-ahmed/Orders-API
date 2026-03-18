@@ -1,0 +1,86 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/orders?status=CONFIRMED&customerId=cust_67890"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    - key: status
+      value: CONFIRMED
+      description: Filter by order status
+    - key: customerId
+      value: cust_67890
+      description: Filter by customer ID
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "items": [
+          {
+            "id": "ord_12345",
+            "customerId": "cust_67890",
+            "status": "CONFIRMED",
+            "items": [
+              {
+                "sku": "HP-LJ-MFP-M234SDW",
+                "name": "HP LaserJet MFP M234sdw",
+                "quantity": 1,
+                "unitPrice": {
+                  "currency": "USD",
+                  "amount": 24999
+                },
+                "totalPrice": {
+                  "currency": "USD",
+                  "amount": 24999
+                }
+              },
+              {
+                "sku": "W1470A",
+                "name": "HP 147A Black Toner Cartridge",
+                "quantity": 2,
+                "unitPrice": {
+                  "currency": "USD",
+                  "amount": 10999
+                },
+                "totalPrice": {
+                  "currency": "USD",
+                  "amount": 21998
+                }
+              }
+            ],
+            "subtotal": {
+              "currency": "USD",
+              "amount": 46997
+            },
+            "tax": {
+              "currency": "USD",
+              "amount": 3759
+            },
+            "shipping": {
+              "currency": "USD",
+              "amount": 1299
+            },
+            "total": {
+              "currency": "USD",
+              "amount": 52055
+            },
+            "createdAt": "2026-03-13T10:00:00Z",
+            "updatedAt": "2026-03-13T10:05:00Z",
+            "metadata": {
+              "partnerId": "prt_13579",
+              "channel": "PARTNER",
+              "purchaseOrderNumber": "PO-1000456"
+            }
+          }
+        ],
+        "nextCursor": "cursor_next_001"
+      }
+order: 1000

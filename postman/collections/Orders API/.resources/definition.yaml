@@ -1,0 +1,5 @@
+$kind: collection
+description: |
+  Design-stage API for managing commerce orders.
+variables:
+  baseUrl: http://api.orders.local

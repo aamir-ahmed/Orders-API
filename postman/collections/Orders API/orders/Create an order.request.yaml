@@ -1,0 +1,46 @@
+$kind: http-request
+description: Secured endpoint (auth required), but 401/403 responses are not defined.
+url: "{{baseUrl}}/orders"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "customerId": "cust_67890",
+      "currency": "USD",
+      "items": [
+        {
+          "sku": "HP-LJ-MFP-M234SDW",
+          "quantity": 1
+        },
+        {
+          "sku": "W1470A",
+          "quantity": 2
+        }
+      ],
+      "shippingAddress": {
+        "line1": "1501 Page Mill Rd",
+        "city": "Palo Alto",
+        "region": "CA",
+        "postalCode": "94304",
+        "country": "US"
+      },
+      "billingAddress": {
+        "line1": "1501 Page Mill Rd",
+        "city": "Palo Alto",
+        "region": "CA",
+        "postalCode": "94304",
+        "country": "US"
+      },
+      "notes": "Partner order submission.",
+      "metadata": {
+        "partnerId": "prt_13579",
+        "channel": "PARTNER",
+        "purchaseOrderNumber": "PO-1000456"
+      }
+    }
+examples: ./.resources/Create an order.resources/examples
+order: 1000

@@ -1,0 +1,60 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/orders/:orderId/events"
+  method: GET
+  headers:
+    Accept: application/json
+  pathVariables:
+    - key: orderId
+      value: string
+      description: Order identifier
+  body:
+    type: text
+    content: ""
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "items": [
+          {
+            "id": "evt_0001",
+            "orderId": "ord_12345",
+            "type": "CREATED",
+            "occurredAt": "2026-03-13T10:00:00Z",
+            "actor": "system",
+            "details": {
+              "note": "Order created.",
+              "partnerId": "prt_13579",
+              "channel": "PARTNER",
+              "purchaseOrderNumber": "PO-1000456"
+            }
+          },
+          {
+            "id": "evt_0002",
+            "orderId": "ord_12345",
+            "type": "CONFIRMED",
+            "occurredAt": "2026-03-13T10:01:00Z",
+            "actor": "system",
+            "details": {
+              "note": "Order confirmed."
+            }
+          },
+          {
+            "id": "evt_0003",
+            "orderId": "ord_12345",
+            "type": "CANCELLED",
+            "occurredAt": "2026-03-13T10:06:00Z",
+            "actor": "system",
+            "details": {
+              "note": "Order cancelled."
+            }
+          }
+        ],
+        "nextCursor": "cursor_next_evt_001"
+      }
+order: 1000
