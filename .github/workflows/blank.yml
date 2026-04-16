@@ -15,8 +15,8 @@ jobs:
 
     # Store collection + environment IDs for reuse across steps
     env:
-      COLLECTION_ID: "53143593-7c483314-4793-4dec-9230-f58990c5f7d8"
-      ENVIRONMENT_ID: "53143593-6370a9ae-d483-4c8b-a9bb-2d1f2c1fedfe"
+      COLLECTION_ID: "53143593-1700f65f-43bf-4679-80b7-8e591ee3678a"
+      ENVIRONMENT_ID: "53143593-0f782d40-e741-4411-877f-5d763330bdd6"
 
     steps:
       # Step 1: Pull your repository code into the runner
