@@ -1,0 +1,140 @@
+name: Automated API tests using Postman CLI
+
+on:
+  push:
+  workflow_dispatch:
+
+# Required for Azure OIDC authentication (no long-lived Azure secrets)
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  automated-api-tests:
+    runs-on: ubuntu-latest
+
+    # Store collection + environment IDs for reuse across steps
+    env:
+      COLLECTION_ID: "53143593-7c483314-4793-4dec-9230-f58990c5f7d8"
+      ENVIRONMENT_ID: "53143593-6370a9ae-d483-4c8b-a9bb-2d1f2c1fedfe"
+
+    steps:
+      # Step 1: Pull your repository code into the runner
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Authenticate GitHub Actions to Azure using OIDC
+      # This allows the workflow to securely call Azure Key Vault
+      - name: Azure login with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Step 3: Install required tools:
+      # - jq (for parsing JSON)
+      # - python3 (for processing environment dynamically)
+      # - Postman CLI (to run collections)
+      - name: Install dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq python3
+          curl -o- "https://dl-cli.pstmn.io/install/unix.sh" | sh
+
+      # Step 4: Authenticate Postman CLI with your API key
+      # This allows access to collections/environments in Postman Cloud
+      - name: Login to Postman CLI
+        shell: bash
+        run: postman login --with-api-key "${{ secrets.POSTMAN_API_KEY }}"
+
+      # Step 5: Fetch the environment definition from Postman Cloud
+      # This retrieves all variables (including Azure Key Vault URLs)
+      - name: Fetch environment from Postman Cloud
+        shell: bash
+        env:
+          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+        run: |
+          curl --fail --silent --show-error \
+            --location "https://api.getpostman.com/environments/${ENVIRONMENT_ID}" \
+            --header "X-API-Key: ${POSTMAN_API_KEY}" \
+            --output postman-cloud-environment.json
+
+      # Step 6: Transform the environment:
+      # - Loop through all variables
+      # - Detect any Azure Key Vault secret URLs
+      # - Fetch real secret values from Azure
+      # - Replace URLs with actual secrets
+      # - Leave normal variables unchanged
+      - name: Build runtime environment with resolved secrets
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import json
+          import re
+          import subprocess
+          import sys
+
+          # Load environment fetched from Postman Cloud
+          with open("postman-cloud-environment.json") as f:
+              data = json.load(f)
+
+          values = data["environment"]["values"]
+
+          # Pattern to detect Azure Key Vault secret identifier URLs
+          pattern = re.compile(r"^https://.*\.vault\.azure\.net/secrets/")
+
+          resolved_values = []
+
+          for v in values:
+              key = v.get("key")
+              value = v.get("value")
+              enabled = v.get("enabled", True)
+
+              # Default: keep value as-is
+              resolved = value
+
+              # If value looks like Azure Key Vault URL → fetch secret
+              if isinstance(value, str) and pattern.match(value):
+                  result = subprocess.run(
+                      ["az", "keyvault", "secret", "show",
+                       "--id", value, "--query", "value", "-o", "tsv"],
+                      capture_output=True,
+                      text=True
+                  )
+
+                  if result.returncode != 0:
+                      print(f"Error resolving secret for {key}", file=sys.stderr)
+                      print(result.stderr, file=sys.stderr)
+                      sys.exit(1)
+
+                  resolved = result.stdout.strip()
+
+                  # Mask secret in GitHub logs
+                  print(f"::add-mask::{resolved}")
+
+              resolved_values.append({
+                  "key": key,
+                  "value": resolved,
+                  "enabled": enabled
+              })
+
+          # Write resolved environment to a temporary file
+          output = {
+              "id": "ci-env",
+              "name": "CI Environment",
+              "values": resolved_values
+          }
+
+          with open("postman.env.json", "w") as f:
+              json.dump(output, f, indent=2)
+          PY
+
+      # Step 7: Run the Postman collection
+      # - Uses collection from Postman Cloud (via ID)
+      # - Uses locally generated environment with resolved secrets
+      - name: Run API tests
+        shell: bash
+        run: |
+          postman collection run "$COLLECTION_ID" -e "postman.env.json"
