@@ -13,24 +13,24 @@ jobs:
   automated-api-tests:
     runs-on: ubuntu-latest
 
-    # Environment variables used across the workflow
+    # Values reused across the workflow
     env:
-      # Postman collection UID (from Postman Cloud)
+      # Postman collection UID
       COLLECTION_ID: "53143593-7e1924ec-b718-4738-8f70-39fd7822fa06"
 
-      # Postman environment UID (from Postman Cloud)
+      # Postman environment UID
       ENVIRONMENT_ID: "53143593-0f782d40-e741-4411-877f-5d763330bdd6"
 
-      # Azure Key Vault name (pre-mapped to this workspace)
+      # Azure Key Vault name already mapped to this workspace
       VAULT_NAME: "field-services-key-vault"
 
     steps:
-      # Step 1: Checkout repository code (standard GitHub Actions step)
+      # Step 1: Check out repository contents onto the runner
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Authenticate GitHub Actions to Azure using OIDC
-      # This avoids storing Azure credentials in GitHub
+      # Step 2: Authenticate to Azure using GitHub OIDC
+      # This avoids storing a long-lived Azure client secret in GitHub
       - name: Azure login with OIDC
         uses: azure/login@v2
         with:
@@ -38,10 +38,10 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           allow-no-subscriptions: true
 
-      # Step 3: Install required tools:
-      # - jq: JSON parsing (optional but useful for debugging)
-      # - python3: used to process environment and resolve secrets
-      # - Postman CLI: used to run collections
+      # Step 3: Install required tools
+      # - jq: optional JSON debugging/inspection
+      # - python3: used to parse the environment and resolve vault-backed values
+      # - Postman CLI: used to run the collection
       - name: Install dependencies
         shell: bash
         run: |
@@ -49,15 +49,14 @@ jobs:
           sudo apt-get install -y jq python3
           curl -o- "https://dl-cli.pstmn.io/install/unix.sh" | sh
 
-      # Step 4: Authenticate Postman CLI using API key
-      # This allows access to Postman Cloud collections and environments
+      # Step 4: Authenticate Postman CLI so it can access Postman Cloud resources
       - name: Login to Postman CLI
         shell: bash
         run: |
           postman login --with-api-key "${{ secrets.POSTMAN_API_KEY }}"
 
       # Step 5: Fetch the environment definition from Postman Cloud
-      # This contains variable definitions, including {{vault:...}} references
+      # This contains all variables, including any values like {{vault:apiKey}}
       - name: Fetch environment from Postman Cloud
         shell: bash
         env:
@@ -68,12 +67,14 @@ jobs:
             --header "X-API-Key: ${POSTMAN_API_KEY}" \
             --output postman-cloud-environment.json
 
-      # Step 6: Resolve vault-backed variables and run the collection
-      # This step:
-      # - Detects variables using {{vault:...}} syntax
-      # - Retrieves their values from Azure Key Vault
-      # - Injects them directly into the Postman CLI run via --env-var
-      # - Avoids writing secrets to disk (no temp environment file)
+      # Step 6: Resolve all {{vault:...}} variables from Azure Key Vault
+      # and inject them directly into the Postman CLI run via --env-var
+      #
+      # Important design notes:
+      # - No temporary file with resolved secrets is created
+      # - Secrets are masked in logs as soon as they are retrieved
+      # - This workflow is intended for standard single-line secrets only
+      # - Multiline secrets such as PEMs/private keys are explicitly rejected
       - name: Run collection with Azure Key Vault values injected at runtime
         shell: bash
         env:
@@ -88,80 +89,156 @@ jobs:
           import subprocess
           import sys
 
-          # Load environment variables from GitHub Actions
+          # Read workflow-level environment variables
           collection_id = os.environ["COLLECTION_ID"]
           environment_id = os.environ["ENVIRONMENT_ID"]
           vault_name = os.environ["VAULT_NAME"]
 
-          # Load Postman environment JSON fetched earlier
-          with open("postman-cloud-environment.json", "r", encoding="utf-8") as f:
-              payload = json.load(f)
+          # Match exact values like {{vault:apiKey}}
+          vault_reference_pattern = re.compile(r"^\{\{vault:([^}]+)\}\}$")
 
-          values = payload.get("environment", {}).get("values", [])
+          def fail(message: str, detail: str = "") -> None:
+              """Print a clear error and fail the workflow."""
+              sys.stderr.write(f"[ERROR] {message}\n")
+              if detail:
+                  sys.stderr.write(detail.rstrip() + "\n")
+              sys.exit(1)
 
-          # Regex to detect values like {{vault:apiKey}}
-          pattern = re.compile(r"^\{\{vault:([^}]+)\}\}$")
+          def mask_secret(value: str) -> None:
+              """Mask a secret in GitHub Actions logs."""
+              if value:
+                  print(f"::add-mask::{value}")
 
-          # Base Postman CLI command:
-          # - runs collection directly via UID
-          # - uses environment from Postman Cloud
-          cmd = [
+          # Load the Postman environment JSON fetched earlier
+          with open("postman-cloud-environment.json", "r", encoding="utf-8") as environment_file:
+              payload = json.load(environment_file)
+
+          environment_object = payload.get("environment")
+          if not isinstance(environment_object, dict):
+              fail("Postman environment payload is missing 'environment'.")
+
+          environment_values = environment_object.get("values")
+          if not isinstance(environment_values, list):
+              fail("Postman environment payload is missing 'environment.values'.")
+
+          # Detect duplicate keys early so behavior stays predictable
+          seen_keys = set()
+          duplicate_keys = set()
+
+          for item in environment_values:
+              key = item.get("key")
+              if isinstance(key, str):
+                  if key in seen_keys:
+                      duplicate_keys.add(key)
+                  seen_keys.add(key)
+
+          if duplicate_keys:
+              fail(
+                  "Duplicate environment keys detected.",
+                  "Duplicates: " + ", ".join(sorted(duplicate_keys))
+              )
+
+          # Build the Postman CLI command as a list of arguments
+          # This uses:
+          # - collection UID directly from Postman Cloud
+          # - environment UID directly from Postman Cloud
+          # Additional --env-var entries will be added for resolved secrets
+          postman_command = [
               "postman", "collection", "run",
               collection_id,
               "-e", environment_id,
-              "--verbose"
+              "--verbose",
           ]
 
           print(f"[INFO] Using Azure Key Vault: {vault_name}")
 
-          # Iterate through all environment variables
-          for item in values:
+          resolved_secret_count = 0
+
+          # Iterate through every variable in the environment
+          for item in environment_values:
               key = item.get("key")
               value = item.get("value", "")
+              enabled = item.get("enabled", True)
 
-              # Check if variable uses {{vault:...}} syntax
-              match = pattern.match(value) if isinstance(value, str) else None
+              # Validate that the variable has a usable key
+              if not isinstance(key, str) or not key.strip():
+                  fail("Encountered an environment variable with a missing or empty key.")
 
-              if not match:
-                  print(f"[LOCAL] Variable '{key}' is not vault-backed")
+              # Skip disabled variables
+              if enabled is False:
+                  print(f"[SKIP] Variable '{key}' is disabled in the environment.")
                   continue
 
-              # Extract secret name from {{vault:secretName}}
-              secret_name = match.group(1).strip()
+              # Skip non-string values
+              if not isinstance(value, str):
+                  print(f"[SKIP] Variable '{key}' does not have a string value.")
+                  continue
 
+              # Check whether the variable uses {{vault:...}} syntax
+              match = vault_reference_pattern.match(value)
+              if not match:
+                  print(f"[LOCAL] Variable '{key}' is not vault-backed.")
+                  continue
+
+              # Extract the Azure Key Vault secret name from {{vault:secretName}}
+              secret_name = match.group(1).strip()
               if not secret_name:
-                  sys.stderr.write(f"[ERROR] Variable '{key}' has an empty vault reference.\n")
-                  sys.exit(1)
+                  fail(f"Variable '{key}' has an empty vault reference.")
 
               print(f"[KEYVAULT] Resolving '{key}' from vault '{vault_name}' using secret '{secret_name}'")
 
-              # Azure CLI call to retrieve secret value
-              az_cmd = [
+              # Retrieve the secret value from Azure Key Vault by name
+              azure_command = [
                   "az", "keyvault", "secret", "show",
                   "--vault-name", vault_name,
                   "--name", secret_name,
                   "--query", "value",
-                  "-o", "tsv"
+                  "-o", "tsv",
               ]
 
-              result = subprocess.run(az_cmd, capture_output=True, text=True)
+              result = subprocess.run(azure_command, capture_output=True, text=True)
 
               if result.returncode != 0:
-                  sys.stderr.write(f"[ERROR] Failed to resolve '{key}' from vault '{vault_name}'.\n")
-                  sys.stderr.write(result.stderr)
-                  sys.exit(result.returncode)
+                  fail(
+                      f"Failed to resolve '{key}' from vault '{vault_name}'.",
+                      result.stderr
+                  )
 
-              secret_value = result.stdout.strip()
+              secret_value = result.stdout
 
-              # Mask secret so it never appears in logs
-              print(f"::add-mask::{secret_value}")
+              # Azure CLI text output usually includes one trailing newline.
+              # Remove only one trailing newline instead of stripping all whitespace.
+              if secret_value.endswith("\n"):
+                  secret_value = secret_value[:-1]
+
+              # Reject values that are unsafe / unsuitable for CLI argument transport
+              if "\x00" in secret_value:
+                  fail(f"Secret '{secret_name}' contains a NUL byte, which is not supported.")
+
+              if "\n" in secret_value or "\r" in secret_value:
+                  fail(
+                      f"Secret '{secret_name}' is multiline.",
+                      "This workflow is intended for standard single-line secrets only. "
+                      "Use a different injection strategy for certificates, private keys, or other multiline values."
+                  )
+
+              # Mask the resolved secret value in logs immediately
+              mask_secret(secret_value)
               print(f"[SUCCESS] Variable '{key}' resolved from Azure Key Vault")
 
-              # Inject resolved value into Postman CLI at runtime
-              # This avoids writing secrets to disk
-              cmd.extend(["--env-var", f"{key}={secret_value}"])
+              # Inject the resolved value into the Postman CLI command at runtime
+              #
+              # Note:
+              # We intentionally do NOT add shell-style quotes here.
+              # subprocess.run([...]) passes each argument directly to Postman CLI
+              # without shell parsing, so quotes are unnecessary and would become
+              # part of the literal value.
+              postman_command.extend(["--env-var", f"{key}={secret_value}"])
+              resolved_secret_count += 1
 
-          # Execute Postman CLI with injected secrets
-          completed = subprocess.run(cmd)
+          print(f"[INFO] Resolved {resolved_secret_count} vault-backed variable(s).")
+
+          # Execute the Postman CLI command
+          completed = subprocess.run(postman_command)
           sys.exit(completed.returncode)
           PY
