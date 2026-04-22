@@ -4,6 +4,7 @@ on:
   push:
   workflow_dispatch:
 
+# Required for Azure OIDC authentication
 permissions:
   id-token: write
   contents: read
@@ -12,17 +13,24 @@ jobs:
   automated-api-tests:
     runs-on: ubuntu-latest
 
+    # Environment variables used across the workflow
     env:
+      # Postman collection UID (from Postman Cloud)
       COLLECTION_ID: "53143593-7e1924ec-b718-4738-8f70-39fd7822fa06"
+
+      # Postman environment UID (from Postman Cloud)
       ENVIRONMENT_ID: "53143593-0f782d40-e741-4411-877f-5d763330bdd6"
+
+      # Azure Key Vault name (pre-mapped to this workspace)
       VAULT_NAME: "field-services-key-vault"
 
     steps:
-      # Pull repository contents into the runner
+      # Step 1: Checkout repository code (standard GitHub Actions step)
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Authenticate GitHub Actions to Azure using OIDC
+      # Step 2: Authenticate GitHub Actions to Azure using OIDC
+      # This avoids storing Azure credentials in GitHub
       - name: Azure login with OIDC
         uses: azure/login@v2
         with:
@@ -30,10 +38,10 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           allow-no-subscriptions: true
 
-      # Install required tools:
-      # - jq for JSON parsing
-      # - python3 for dynamic environment processing
-      # - Postman CLI for collection execution
+      # Step 3: Install required tools:
+      # - jq: JSON parsing (optional but useful for debugging)
+      # - python3: used to process environment and resolve secrets
+      # - Postman CLI: used to run collections
       - name: Install dependencies
         shell: bash
         run: |
@@ -41,34 +49,15 @@ jobs:
           sudo apt-get install -y jq python3
           curl -o- "https://dl-cli.pstmn.io/install/unix.sh" | sh
 
-      # Authenticate Postman CLI with your API key
+      # Step 4: Authenticate Postman CLI using API key
+      # This allows access to Postman Cloud collections and environments
       - name: Login to Postman CLI
         shell: bash
-        run: postman login --with-api-key "${{ secrets.POSTMAN_API_KEY }}"
-
-      # Optional debug: confirm Postman identity
-      - name: Verify Postman identity
-        shell: bash
-        env:
-          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
         run: |
-          echo "Checking Postman identity..."
-          curl --fail --silent --show-error \
-            --location "https://api.getpostman.com/me" \
-            --header "X-API-Key: ${POSTMAN_API_KEY}" | jq
+          postman login --with-api-key "${{ secrets.POSTMAN_API_KEY }}"
 
-      # Fetch collection JSON from Postman Cloud
-      - name: Fetch collection from Postman Cloud
-        shell: bash
-        env:
-          POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
-        run: |
-          curl --fail --silent --show-error \
-            --location "https://api.getpostman.com/collections/${COLLECTION_ID}" \
-            --header "X-API-Key: ${POSTMAN_API_KEY}" \
-            --output postman-cloud-collection.json
-
-      # Fetch environment JSON from Postman Cloud
+      # Step 5: Fetch the environment definition from Postman Cloud
+      # This contains variable definitions, including {{vault:...}} references
       - name: Fetch environment from Postman Cloud
         shell: bash
         env:
@@ -79,24 +68,17 @@ jobs:
             --header "X-API-Key: ${POSTMAN_API_KEY}" \
             --output postman-cloud-environment.json
 
-      # Safe debug: show environment name and keys only
-      - name: Debug environment fetch
-        shell: bash
-        run: |
-          echo "Environment metadata:"
-          jq '{name: .environment.name, uid: .environment.uid}' postman-cloud-environment.json
-
-          echo "Environment keys:"
-          jq -r '.environment.values[].key' postman-cloud-environment.json
-
-      # Build a runtime environment:
-      # - detect values like {{vault:SecretName}}
-      # - fetch SecretName from the known Azure Key Vault
-      # - replace placeholder with actual secret value
-      # - leave all other variables unchanged
-      - name: Build runtime environment with resolved Key Vault secrets
+      # Step 6: Resolve vault-backed variables and run the collection
+      # This step:
+      # - Detects variables using {{vault:...}} syntax
+      # - Retrieves their values from Azure Key Vault
+      # - Injects them directly into the Postman CLI run via --env-var
+      # - Avoids writing secrets to disk (no temp environment file)
+      - name: Run collection with Azure Key Vault values injected at runtime
         shell: bash
         env:
+          COLLECTION_ID: ${{ env.COLLECTION_ID }}
+          ENVIRONMENT_ID: ${{ env.ENVIRONMENT_ID }}
           VAULT_NAME: ${{ env.VAULT_NAME }}
         run: |
           python3 <<'PY'
@@ -106,89 +88,80 @@ jobs:
           import subprocess
           import sys
 
+          # Load environment variables from GitHub Actions
+          collection_id = os.environ["COLLECTION_ID"]
+          environment_id = os.environ["ENVIRONMENT_ID"]
           vault_name = os.environ["VAULT_NAME"]
-          print(f"[INFO] Using Azure Key Vault: {vault_name}")
 
+          # Load Postman environment JSON fetched earlier
           with open("postman-cloud-environment.json", "r", encoding="utf-8") as f:
               payload = json.load(f)
 
-          env_obj = payload.get("environment", {})
-          values = env_obj.get("values", [])
+          values = payload.get("environment", {}).get("values", [])
 
-          # Match exactly {{vault:SecretName}}
+          # Regex to detect values like {{vault:apiKey}}
           pattern = re.compile(r"^\{\{vault:([^}]+)\}\}$")
 
-          resolved_values = []
+          # Base Postman CLI command:
+          # - runs collection directly via UID
+          # - uses environment from Postman Cloud
+          cmd = [
+              "postman", "collection", "run",
+              collection_id,
+              "-e", environment_id,
+              "--verbose"
+          ]
 
+          print(f"[INFO] Using Azure Key Vault: {vault_name}")
+
+          # Iterate through all environment variables
           for item in values:
               key = item.get("key")
               value = item.get("value", "")
-              enabled = item.get("enabled", True)
-              var_type = item.get("type", "default")
 
-              resolved_value = value
+              # Check if variable uses {{vault:...}} syntax
               match = pattern.match(value) if isinstance(value, str) else None
 
-              if match:
-                  secret_name = match.group(1).strip()
+              if not match:
+                  print(f"[LOCAL] Variable '{key}' is not vault-backed")
+                  continue
 
-                  if not secret_name:
-                      sys.stderr.write(f"[ERROR] Variable '{key}' has an empty vault reference.\n")
-                      sys.exit(1)
+              # Extract secret name from {{vault:secretName}}
+              secret_name = match.group(1).strip()
 
-                  print(f"[KEYVAULT] Resolving '{key}' from vault '{vault_name}' using secret '{secret_name}'")
+              if not secret_name:
+                  sys.stderr.write(f"[ERROR] Variable '{key}' has an empty vault reference.\n")
+                  sys.exit(1)
 
-                  cmd = [
-                      "az", "keyvault", "secret", "show",
-                      "--vault-name", vault_name,
-                      "--name", secret_name,
-                      "--query", "value",
-                      "-o", "tsv"
-                  ]
+              print(f"[KEYVAULT] Resolving '{key}' from vault '{vault_name}' using secret '{secret_name}'")
 
-                  result = subprocess.run(cmd, capture_output=True, text=True)
+              # Azure CLI call to retrieve secret value
+              az_cmd = [
+                  "az", "keyvault", "secret", "show",
+                  "--vault-name", vault_name,
+                  "--name", secret_name,
+                  "--query", "value",
+                  "-o", "tsv"
+              ]
 
-                  if result.returncode != 0:
-                      sys.stderr.write(f"[ERROR] Failed to resolve '{key}' from vault '{vault_name}'.\n")
-                      sys.stderr.write(result.stderr)
-                      sys.exit(result.returncode)
+              result = subprocess.run(az_cmd, capture_output=True, text=True)
 
-                  resolved_value = result.stdout.strip()
+              if result.returncode != 0:
+                  sys.stderr.write(f"[ERROR] Failed to resolve '{key}' from vault '{vault_name}'.\n")
+                  sys.stderr.write(result.stderr)
+                  sys.exit(result.returncode)
 
-                  # Mask resolved secret in GitHub logs
-                  print(f"::add-mask::{resolved_value}")
-                  print(f"[SUCCESS] Variable '{key}' resolved from Azure Key Vault")
-              else:
-                  print(f"[LOCAL] Variable '{key}' using literal environment value")
+              secret_value = result.stdout.strip()
 
-              resolved_values.append({
-                  "key": key,
-                  "value": resolved_value,
-                  "type": var_type,
-                  "enabled": enabled
-              })
+              # Mask secret so it never appears in logs
+              print(f"::add-mask::{secret_value}")
+              print(f"[SUCCESS] Variable '{key}' resolved from Azure Key Vault")
 
-          runtime_env = {
-              "id": env_obj.get("id", "ci-env"),
-              "name": env_obj.get("name", "CI Environment"),
-              "values": resolved_values
-          }
+              # Inject resolved value into Postman CLI at runtime
+              # This avoids writing secrets to disk
+              cmd.extend(["--env-var", f"{key}={secret_value}"])
 
-          with open("postman.env.json", "w", encoding="utf-8") as f:
-              json.dump(runtime_env, f, indent=2)
+          # Execute Postman CLI with injected secrets
+          completed = subprocess.run(cmd)
+          sys.exit(completed.returncode)
           PY
-
-      # Safe debug: show generated environment keys only
-      - name: Inspect generated environment safely
-        shell: bash
-        run: |
-          echo "Generated environment keys:"
-          jq -r '.values[].key' postman.env.json
-
-      # Run the collection using:
-      # - collection fetched from Postman Cloud
-      # - generated environment with Key Vault references resolved
-      - name: Run API tests
-        shell: bash
-        run: |
-          postman collection run "postman-cloud-collection.json" -e "postman.env.json" --verbose
